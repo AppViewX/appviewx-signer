@@ -1,0 +1,16 @@
+{
+  "CN": "AppViewXCA",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "NY",
+      "O": "AppViewX",
+      "OU": "",
+      "ST": ""
+    }
+  ]
+}
