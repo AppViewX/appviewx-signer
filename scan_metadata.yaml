@@ -1,0 +1,2 @@
+# Set enable whitesource scanning for this project - true or false
+enable_ws_scan: true
