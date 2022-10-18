@@ -23,17 +23,19 @@ import (
 	"strings"
 	"time"
 
-	capi "k8s.io/api/certificates/v1beta1"
+	capi "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
 	// +kubebuilder:scaffold:imports
 
 	"github.com/gopaltirupur/appviewx-signer/controllers"
 	"github.com/gopaltirupur/appviewx-signer/internal/signer/appviewx"
+	"github.com/gopaltirupur/appviewx-signer/internal/signer/monitor"
 )
 
 var version string = "1.2"
@@ -53,6 +55,14 @@ func init() {
 	_ = capi.AddToScheme(scheme)
 	_ = corev1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
+
+	//Add Custom Metrics
+	metrics.Registry.MustRegister(monitor.CSRCount)
+	metrics.Registry.MustRegister(monitor.AppViewXCertificateSuccessCount)
+	metrics.Registry.MustRegister(monitor.AppViewXCertificateFailureCount)
+	metrics.Registry.MustRegister(monitor.JWTTokenReadCount)
+	metrics.Registry.MustRegister(monitor.AppViewXLoginSuccessCount)
+	metrics.Registry.MustRegister(monitor.AppViewXLoginFailureCount)
 }
 
 func main() {
