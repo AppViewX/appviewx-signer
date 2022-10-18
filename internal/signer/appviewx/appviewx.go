@@ -19,6 +19,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/gopaltirupur/appviewx-signer/internal/signer/common"
+	"github.com/gopaltirupur/appviewx-signer/internal/signer/monitor"
 	"github.com/gopaltirupur/appviewx-signer/internal/signer/vault"
 )
 
@@ -34,6 +35,7 @@ var defaultRetryWaitTimeInSeconds int = 2
 var retryTimes int
 var retryWaitTimeInSeconds int
 var sessionMutex sync.Mutex
+var monitorUpdateMutex sync.Mutex
 
 var caSettingNameWiseRootAndIntermediateCert map[string]string
 
@@ -73,7 +75,7 @@ func (signer *ApViewXSigner) MakeCallToAppViewXAndGetCertificate(ctx context.Con
 
 	log.V(1).Info("Creating Certificate in AppViewX")
 	resourceID, certificateContentFromAppViewX, statusCode, err := signer.CreateCertificate(ctx, appviewxEnv, appviewxEnv.SessionID, csr, isSync, externalRequestID, isDownload)
-	if statusCode == 407 {
+	if statusCode == 407 || statusCode == 401 {
 		log.V(1).Info("SessionID invalid, Generating new SessionID")
 		sessionMutex.Lock()
 
@@ -120,6 +122,10 @@ func (signer *ApViewXSigner) MakeCallToAppViewXAndGetCertificate(ctx context.Con
 	}
 
 	if statusCode == 429 {
+		monitorUpdateMutex.Lock()
+		monitor.AppViewXCertificateFailureCount.Inc()
+		monitorUpdateMutex.Unlock()
+
 		return nil, nil, fmt.Errorf("status code : %d", statusCode)
 	}
 
@@ -128,10 +134,19 @@ func (signer *ApViewXSigner) MakeCallToAppViewXAndGetCertificate(ctx context.Con
 	}
 
 	if err != nil {
+		monitorUpdateMutex.Lock()
+		monitor.AppViewXCertificateFailureCount.Inc()
+		monitorUpdateMutex.Unlock()
+
 		return
 	}
 
 	if certificateContentFromAppViewX == nil {
+
+		monitorUpdateMutex.Lock()
+		monitor.AppViewXCertificateFailureCount.Inc()
+		monitorUpdateMutex.Unlock()
+
 		log.V(1).Info("certificateContentFromAppViewX length is 0")
 		return nil, nil, nil
 	}
@@ -142,7 +157,15 @@ func (signer *ApViewXSigner) MakeCallToAppViewXAndGetCertificate(ctx context.Con
 
 	cert, err = base64.StdEncoding.DecodeString(*certificateContentFromAppViewX)
 	if err != nil {
+		monitorUpdateMutex.Lock()
+		monitor.AppViewXCertificateFailureCount.Inc()
+		monitorUpdateMutex.Unlock()
+
 		return nil, nil, err
+	} else {
+		monitorUpdateMutex.Lock()
+		monitor.AppViewXCertificateSuccessCount.Inc()
+		monitorUpdateMutex.Unlock()
 	}
 
 	// log.V(1).Info("certificateContentFromAppViewX : \n" + *certificateContentFromAppViewX)

@@ -23,7 +23,7 @@ import (
 	"log"
 	"time"
 
-	capi "k8s.io/api/certificates/v1beta1"
+	capi "k8s.io/api/certificates/v1"
 
 	"github.com/gopaltirupur/appviewx-signer/internal/kubernetes/authority"
 )

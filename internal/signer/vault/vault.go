@@ -13,11 +13,14 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/gopaltirupur/appviewx-signer/internal/signer/common"
+	"github.com/gopaltirupur/appviewx-signer/internal/signer/monitor"
 )
 
 var vault *Vault
+var jwtTokenMonitorMutex sync.Mutex
 
 const (
 	KUBE_TOKEN_PATH  = "/var/run/secrets/kubernetes.io/serviceaccount/token"
@@ -276,6 +279,11 @@ func (vault *Vault) MakePostCallAndReturnResponse(
 
 func (vault *Vault) getToken(ctx context.Context) (string, error) {
 	log.Println("Running Get Token")
+
+	jwtTokenMonitorMutex.Lock()
+	monitor.JWTTokenReadCount.Inc()
+	jwtTokenMonitorMutex.Unlock()
+
 	log.Printf("Reading the file %s for jwt token\n", KUBE_TOKEN_PATH)
 	kubeTokenContents, err := ioutil.ReadFile(KUBE_TOKEN_PATH)
 	if err != nil {

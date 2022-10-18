@@ -9,15 +9,18 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	"github.com/gopaltirupur/appviewx-signer/internal/signer/common"
+	"github.com/gopaltirupur/appviewx-signer/internal/signer/monitor"
 )
 
 var appviewxSyncCertificateTTLInSec string
 var defaultAppViewXSyncCertificateTTLInSec = "60"
+var loginCountMonitorMutex sync.Mutex
 
 func init() {
 	appviewxSyncCertificateTTLInSec = os.Getenv("APPVIEWX_SYNC_CERTIFICATE_TTL")
@@ -109,6 +112,7 @@ func (signer *ApViewXSigner) CreateCertificate(ctx context.Context, appviewxEnv 
 
 	responseContents, statusCode, err := signer.MakePostCallAndReturnResponse(ctx, url, requestPayload, additionalRequestHeaders)
 	if err != nil {
+
 		log.V(1).Info("Error in making Create Certificate : ", "zap.Error(err) : ", zap.Error(err))
 		return nil, nil, 0, err
 	}
@@ -200,6 +204,11 @@ func (signer *ApViewXSigner) LoginAndGetSessionID(ctx context.Context, appviewxE
 	url, err := common.GenerateURL(ctx, appviewxEnv.AppViewXIsHTTPS, appviewxEnv.AppViewXHost, appviewxEnv.AppViewXPort, "/avxapi/", "login", getCommonQueryParamMap())
 	if err != nil {
 		log.Error(err, "loginAndGetSessionID - Error in generating url for session ID :")
+
+		loginCountMonitorMutex.Lock()
+		monitor.AppViewXLoginFailureCount.Inc()
+		loginCountMonitorMutex.Unlock()
+
 		return "", err
 	}
 
@@ -210,6 +219,11 @@ func (signer *ApViewXSigner) LoginAndGetSessionID(ctx context.Context, appviewxE
 	responseContents, _, err := signer.MakePostCallAndReturnResponse(ctx, url, requestPayload, additionalRequestHeaders)
 	if err != nil {
 		log.Error(err, "Error in making login Call : ")
+
+		loginCountMonitorMutex.Lock()
+		monitor.AppViewXLoginFailureCount.Inc()
+		loginCountMonitorMutex.Unlock()
+
 		return "", err
 	}
 
@@ -221,6 +235,16 @@ func (signer *ApViewXSigner) LoginAndGetSessionID(ctx context.Context, appviewxE
 	// v, _ := json.Marshal(sessionResponse)
 	// log.V(1).Info(string(v))
 	output = sessionResponse.Response.SessionId
+
+	if len(output) <= 0 {
+		loginCountMonitorMutex.Lock()
+		monitor.AppViewXLoginFailureCount.Inc()
+		loginCountMonitorMutex.Unlock()
+	} else {
+		loginCountMonitorMutex.Lock()
+		monitor.AppViewXLoginSuccessCount.Inc()
+		loginCountMonitorMutex.Unlock()
+	}
 
 	log.V(1).Info(" -------------------------------------- Finished loginAndGetSessionID -------------------------------------- ")
 

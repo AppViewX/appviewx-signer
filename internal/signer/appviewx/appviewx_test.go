@@ -10,8 +10,8 @@ func TestMainAppViewX(t *testing.T) {
 	CurrentCA = os.Getenv("APPVIEWX_ENV_CERTIFICATE_AUTHORITY")
 
 	os.Setenv("LOG_LEVEL", "DEBUG")
-	os.Setenv("APPVIEWX_ENV_HOST", "192.168.95.157")
-	os.Setenv("APPVIEWX_ENV_PORT", "31443")
+	os.Setenv("APPVIEWX_ENV_HOST", "HOST_NAME")
+	os.Setenv("APPVIEWX_ENV_PORT", "PORT")
 	os.Setenv("APPVIEWX_ENV_IS_HTTPS", "true")
 	os.Setenv("APPVIEWX_ENV_USER_NAME", "admin")
 	os.Setenv("APPVIEWX_ENV_PASSWORD", "PASSWORD")
